@@ -23,6 +23,11 @@ import { MouseEvent, KeyboardEvent } from '../../events';
           (click)="onCheckboxChange($event)"
         />
       </label>
+      <label
+        *ngIf="column.isTreeColumn">
+        +
+      </label>
+
       <span
         *ngIf="!column.cellTemplate"
         [title]="sanitizedValue"
@@ -40,10 +45,11 @@ export class DataTableBodyCellComponent implements DoCheck, OnDestroy {
   @Input() displayCheck: any;
 
   @Input() set group(group: any){
+    console.log('##### - 1', group);
     this._group = group;
     this.cellContext.group = group;
     this.checkValueUpdates();
-    this.cd.markForCheck();    
+    this.cd.markForCheck();
   }
 
   get group(){
@@ -54,7 +60,7 @@ export class DataTableBodyCellComponent implements DoCheck, OnDestroy {
     this._rowHeight = val;
     this.cellContext.rowHeight = val;
     this.checkValueUpdates();
-    this.cd.markForCheck();        
+    this.cd.markForCheck();
   }
 
   get rowHeight(){
@@ -70,7 +76,7 @@ export class DataTableBodyCellComponent implements DoCheck, OnDestroy {
   get isSelected(): boolean {
     return this._isSelected;
   }
-  
+
   @Input() set expanded(val: boolean) {
     this._expanded = val;
     this.cellContext.expanded = val;
@@ -128,16 +134,16 @@ export class DataTableBodyCellComponent implements DoCheck, OnDestroy {
   @ViewChild('cellTemplate', { read: ViewContainerRef }) cellTemplate: ViewContainerRef;
 
   @HostBinding('class')
-  get columnCssClasses(): any {    
+  get columnCssClasses(): any {
     let cls = 'datatable-body-cell';
     if (this.column.cellClass) {
       if (typeof this.column.cellClass === 'string') {
         cls += ' ' + this.column.cellClass;
       } else if(typeof this.column.cellClass === 'function') {
-        const res = this.column.cellClass({ 
-          row: this.row, 
-          group: this.group, 
-          column: this.column, 
+        const res = this.column.cellClass({
+          row: this.row,
+          group: this.group,
+          column: this.column,
           value: this.value ,
           rowHeight: this.rowHeight
         });
@@ -204,7 +210,7 @@ export class DataTableBodyCellComponent implements DoCheck, OnDestroy {
   constructor(element: ElementRef, private cd: ChangeDetectorRef) {
     this._element = element.nativeElement;
   }
-  
+
   ngDoCheck(): void {
     this.checkValueUpdates();
   }
@@ -272,7 +278,7 @@ export class DataTableBodyCellComponent implements DoCheck, OnDestroy {
       group: this.group,
       rowHeight: this.rowHeight,
       column: this.column,
-      value: this.value,      
+      value: this.value,
       cellElement: this._element
     });
   }
