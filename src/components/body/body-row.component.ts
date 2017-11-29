@@ -28,9 +28,11 @@ import { MouseEvent, KeyboardEvent } from '../../events';
         [column]="column"
         [rowHeight]="rowHeight"
         [displayCheck]="displayCheck"
-        (activate)="onActivate($event, ii)">
+        [treeStatus]="treeStatus"
+        (activate)="onActivate($event, ii)"
+        (treeAction)="onTreeAction()">
       </datatable-body-cell>
-    </div>      
+    </div>
   `
 })
 export class DataTableBodyRowComponent implements DoCheck {
@@ -47,7 +49,7 @@ export class DataTableBodyRowComponent implements DoCheck {
   @Input() set innerWidth(val: number) {
     if (this._columns) {
       const colByPin = columnsByPin(this._columns);
-      this.columnGroupWidths = columnGroupWidths(colByPin, colByPin);      
+      this.columnGroupWidths = columnGroupWidths(colByPin, colByPin);
     }
 
     this._innerWidth = val;
@@ -66,6 +68,8 @@ export class DataTableBodyRowComponent implements DoCheck {
   @Input() isSelected: boolean;
   @Input() rowIndex: number;
   @Input() displayCheck: any;
+  // loading, expanded, collapsed
+  @Input() treeStatus: string;
 
   @HostBinding('class')
   get cssClass() {
@@ -98,6 +102,7 @@ export class DataTableBodyRowComponent implements DoCheck {
   }
 
   @Output() activate: EventEmitter<any> = new EventEmitter();
+  @Output() treeAction: EventEmitter<any> = new EventEmitter();
 
   element: any;
   columnGroupWidths: any;
@@ -110,7 +115,7 @@ export class DataTableBodyRowComponent implements DoCheck {
   constructor(
       private differs: KeyValueDiffers,
       private scrollbarHelper: ScrollbarHelper,
-      private cd: ChangeDetectorRef, 
+      private cd: ChangeDetectorRef,
       element: ElementRef) {
     this.element = element.nativeElement;
     this.rowDiffer = differs.find({}).create();
@@ -121,7 +126,7 @@ export class DataTableBodyRowComponent implements DoCheck {
       this.cd.markForCheck();
     }
   }
-  
+
   trackByGroups(index: number, colGroup: any): any {
     return colGroup.type;
   }
@@ -195,8 +200,11 @@ export class DataTableBodyRowComponent implements DoCheck {
   recalculateColumns(val: any[] = this.columns): void {
     this._columns = val;
     const colsByPin = columnsByPin(this._columns);
-    this.columnsByPin = allColumnsByPinArr(this._columns);        
+    this.columnsByPin = allColumnsByPinArr(this._columns);
     this.columnGroupWidths = columnGroupWidths(colsByPin, this._columns);
   }
 
+  onTreeAction() {
+    this.treeAction.emit();
+  }
 }

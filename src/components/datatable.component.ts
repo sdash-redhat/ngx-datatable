@@ -8,7 +8,8 @@ import {
 
 import {
   forceFillColumnWidths, adjustColumnWidths, sortRows,
-  setColumnDefaults, throttleable, translateTemplates
+  setColumnDefaults, throttleable, translateTemplates,
+  groupRowsByParents
 } from '../utils';
 import { ScrollbarHelper } from '../services';
 import { ColumnMode, SortType, SelectionType, TableColumn, ContextmenuType } from '../types';
@@ -77,7 +78,8 @@ import { MouseEvent } from '../events';
         (activate)="activate.emit($event)"
         (rowContextmenu)="onRowContextmenu($event)"
         (select)="onBodySelect($event)"
-        (scroll)="onBodyScroll($event)">
+        (scroll)="onBodyScroll($event)"
+        (treeAction)="onTreeAction($event)">
       </datatable-body>
       <datatable-footer
         *ngIf="footerHeight"
@@ -111,14 +113,17 @@ export class DatatableComponent implements OnInit, DoCheck, AfterViewInit {
    */
   @Input() set rows(val: any) {
     this._rows = val;
-    
+
     // auto sort on new updates
     if (!this.externalSorting) {
       this._internalRows = sortRows(val, this._internalColumns, this.sorts);
     } else {
       this._internalRows = [...val];
     }
-    
+
+    // auto group by parent on new update
+    this._internalRows = groupRowsByParents(this._internalRows);
+
     // recalculate sizes/etc
     this.recalculate();
 
@@ -452,6 +457,11 @@ export class DatatableComponent implements OnInit, DoCheck, AfterViewInit {
   @Output() tableContextmenu = new EventEmitter<{ event: MouseEvent, type: ContextmenuType, content: any }>(false);
 
   /**
+   * A row was expanded ot collapsed for tree
+   */
+  @Output() treeAction: EventEmitter<any> = new EventEmitter();
+
+  /**
    * CSS class applied if the header height if fixed height.
    */
   @HostBinding('class.fixed-header')
@@ -576,7 +586,7 @@ export class DatatableComponent implements OnInit, DoCheck, AfterViewInit {
    * Group Header templates gathered from the ContentChild
    */
   @ContentChild(DatatableGroupHeaderDirective)
-  groupHeader: DatatableGroupHeaderDirective;  
+  groupHeader: DatatableGroupHeaderDirective;
 
   /**
    * Footer template gathered from the ContentChild
@@ -638,7 +648,7 @@ export class DatatableComponent implements OnInit, DoCheck, AfterViewInit {
     // need to call this immediatly to size
     // if the table is hidden the visibility
     // listener will invoke this itself upon show
-    this.recalculate();    
+    this.recalculate();
   }
 
   /**
@@ -669,7 +679,7 @@ export class DatatableComponent implements OnInit, DoCheck, AfterViewInit {
 
   /**
    * Creates a map with the data grouped by the user choice of grouping index
-   * 
+   *
    * @param originalArray the original array passed via parameter
    * @param groupByIndex  the index of the column to group the data by
    */
@@ -706,7 +716,10 @@ export class DatatableComponent implements OnInit, DoCheck, AfterViewInit {
       } else {
         this._internalRows = [...this.rows];
       }
-      
+
+      // auto group by parent on new update
+      this._internalRows = groupRowsByParents(this._internalRows);
+
       this.recalculatePages();
       this.cd.markForCheck();
     }
@@ -833,18 +846,18 @@ export class DatatableComponent implements OnInit, DoCheck, AfterViewInit {
     // Keep the page size constant even if the row has been expanded.
     // This is because an expanded row is still considered to be a child of
     // the original row.  Hence calculation would use rowHeight only.
-    if (this.scrollbarV) {      
+    if (this.scrollbarV) {
       const size = Math.ceil(this.bodyHeight / this.rowHeight);
       return Math.max(size, 0);
     }
 
     // if limit is passed, we are paging
-    if (this.limit !== undefined) {      
+    if (this.limit !== undefined) {
       return this.limit;
     }
 
     // otherwise use row length
-    if (val) {     
+    if (val) {
       return val.length;
     }
 
@@ -863,7 +876,7 @@ export class DatatableComponent implements OnInit, DoCheck, AfterViewInit {
         return this.groupedRows.length;
       } else {
         return val.length;
-      }        
+      }
     }
 
     return this.count;
@@ -951,6 +964,9 @@ export class DatatableComponent implements OnInit, DoCheck, AfterViewInit {
       this._internalRows = sortRows(this.rows, this._internalColumns, sorts);
     }
 
+    // auto group by parent on new update
+    this._internalRows = groupRowsByParents(this._internalRows);
+
     this.sorts = sorts;
     // Always go to first page when sorting to see the newly sorted data
     this.offset = 0;
@@ -983,5 +999,15 @@ export class DatatableComponent implements OnInit, DoCheck, AfterViewInit {
    */
   onBodySelect(event: any): void {
     this.select.emit(event);
+  }
+
+  /**
+   * A row was expanded ot collapsed for tree
+   */
+  onTreeAction(event: any) {
+    const row = event.row;
+    // TODO: For duplicated items this will not work
+    const rowIndex = this._rows.findIndex(r => r.id === event.row.id);
+    this.treeAction.emit({row, rowIndex});
   }
 }
